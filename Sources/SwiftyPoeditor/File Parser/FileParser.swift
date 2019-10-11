@@ -39,15 +39,15 @@ enum FileParserError: Error, LocalizedError {
 
 class FileParser {
     
-    // MARK - Private properties
+    // MARK: - Private properties
     
     private(set) var localizationKeys: [String] = [] // array to store parsed keys
     
-    // MARK - Public properties
+    // MARK: - Public properties
     
     let settings: ParserSettings
     
-    // MARK - Lifecycle
+    // MARK: - Lifecycle
     
     /// init localization enum file parser
     /// - Parameter settings: settings structure with parser params (ParserSettings)
@@ -55,7 +55,7 @@ class FileParser {
         self.settings = settings
     }
     
-    // MARK - Public methods
+    // MARK: - Public methods
     
     /// parse input file as localization enum
     func parse() throws -> [String] {
@@ -105,7 +105,7 @@ class FileParser {
         return self.localizationKeys
     }
     
-    // MARK - Private methods
+    // MARK: - Private methods
     
     /// recursively iteratet over nested enums and compose localization keys
     /// - Parameter members: enum child members

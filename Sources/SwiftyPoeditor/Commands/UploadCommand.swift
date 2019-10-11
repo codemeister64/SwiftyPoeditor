@@ -21,7 +21,7 @@ enum UploadCommandError: Error, LocalizedError {
 
 class UploadCommand: Command {
     
-    // MARK - Declarations
+    // MARK: - Declarations
     
     /// describes allowed params with their description in current command
     struct Signature: CommandSignature {
@@ -53,18 +53,18 @@ class UploadCommand: Command {
     }
     
     
-    // MARK - Private properties
+    // MARK: - Private properties
     
     private var poeditorClient: Poeditor? // POEditor API client
     private var currentLoadingBar: ActivityIndicator<LoadingBar>? // console activity indicator
     
-    // MARK - Public properties
+    // MARK: - Public properties
     
     var help: String {
         "This command will sync POEditor terms. Source terms list generates based on localization enum"
     }
     
-    // MARK - Command protocol implementation
+    // MARK: - Command protocol implementation
     
     /// execute command
     /// - Parameter context: console context
@@ -96,7 +96,7 @@ class UploadCommand: Command {
         }
     }
     
-    // MARK - Private methods
+    // MARK: - Private methods
     
     /// parse input to settings struct
     /// if some required params not provided, ask them in console

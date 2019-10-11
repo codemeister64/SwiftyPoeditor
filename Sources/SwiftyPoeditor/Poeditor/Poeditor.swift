@@ -32,7 +32,7 @@ enum PoeditorError: Error, LocalizedError {
 class Poeditor {
     #warning("TODO: remove IBM SwiftyRequest and use something better. Maybe native async-http-client with custom wrapper. SwiftyRequest can't deal with futures outside. So currently we need to create own eventloop")
     
-    // MARK - Private properties
+    // MARK: - Private properties
     
     private let settings: PoeditorSettings
     private let eventLoop: MultiThreadedEventLoopGroup
@@ -62,7 +62,7 @@ class Poeditor {
     
     private lazy var encoder: JSONEncoder = JSONEncoder()
     
-    // MARK - Lifecycle
+    // MARK: - Lifecycle
     
     /// init POEditor API client
     /// - Parameter settings: settings structure with API params (PoeditorSettings)
@@ -80,7 +80,7 @@ class Poeditor {
         shutDown()
     }
     
-    // MARK - Public methods
+    // MARK: - Public methods
     
     /// returns future result with list of all available terms
     func getAllTerms() -> EventLoopFuture<Terms> {
@@ -321,7 +321,7 @@ class Poeditor {
         return promise.futureResult
     }
     
-    // MARK - Private methods
+    // MARK: - Private methods
     
     /// json decoder wrapper
     /// - Parameter type: structure to decode

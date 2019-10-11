@@ -7,7 +7,7 @@
 
 import Foundation
 
-// MARK - Predefined constants
+// MARK: - Predefined constants
 
 struct Constants {
     struct Defaults {
@@ -28,7 +28,7 @@ struct Constants {
     }
 }
 
-// MARK - Settings objects declarations
+// MARK: - Settings objects declarations
 
 struct ParserSettings {
     let path: String

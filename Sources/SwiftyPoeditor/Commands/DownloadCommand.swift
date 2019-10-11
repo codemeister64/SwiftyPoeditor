@@ -21,7 +21,7 @@ enum DownloadCommandError: Error, LocalizedError {
 
 class DownloadCommand: Command {
     
-    // MARK - Declarations
+    // MARK: - Declarations
     
     /// describes allowed params with their description in current command
     struct Signature: CommandSignature {
@@ -42,19 +42,19 @@ class DownloadCommand: Command {
         init() { }
     }
     
-    // MARK - Private properties
+    // MARK: - Private properties
     
     private var poeditorClient: Poeditor? // POEditor API client
     private var fileManager: LocalizationsFileManager? // FileManager
     private var currentLoadingBar: ActivityIndicator<LoadingBar>? // console activity indicator
     
-    // MARK - Public properties
+    // MARK: - Public properties
     
     var help: String {
         "This command will export and donwload specified language as *.strings from POEditor service."
     }
     
-    // MARK - Command protocol implementation
+    // MARK: - Command protocol implementation
     
     /// execute command
     /// - Parameter context: console context
@@ -82,7 +82,7 @@ class DownloadCommand: Command {
         }
     }
     
-    // MARK - Private methods
+    // MARK: - Private methods
     
     /// parse input to settings struct
     /// if some required params not provided, ask them in console

@@ -9,18 +9,18 @@ import Foundation
 
 class LocalizationsFileManager {
 
-    // MARK - Private properties
+    // MARK: - Private properties
     
     private var destinationPath: String {
         return settings.destinationPath.absolutePath
     }
     
-    // MARK - Public properties
+    // MARK: - Public properties
     
     private(set) var fileManager: FileManager
     let settings: FileManagerSettings
     
-    // MARK - Lifecycle
+    // MARK: - Lifecycle
     
     /// initializing
     /// - Parameter settings: input settings
@@ -29,7 +29,7 @@ class LocalizationsFileManager {
         self.fileManager = FileManager.default
     }
     
-    // MARK - Public methods
+    // MARK: - Public methods
     
     /// write data to destination file
     /// - Parameter data: data content
@@ -45,7 +45,7 @@ class LocalizationsFileManager {
         return destinationURL
     }
     
-    // MARK - Private methods
+    // MARK: - Private methods
     
     /// check wether destination file exist
     private func checkIfFileExist(url: URL) -> Bool {

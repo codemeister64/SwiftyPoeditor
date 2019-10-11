@@ -11,7 +11,7 @@ let package = Package(
         .package(url: "https://github.com/yanagiba/swift-ast.git",
                  from: "0.19.9"),
         .package(url: "https://github.com/IBM-Swift/SwiftyRequest.git", from: "3.0.0"),
-        .package(url: "https://github.com/vapor/console-kit.git", from: "4.0.0-alpha.2"),
+        .package(url: "https://github.com/vapor/console-kit.git", from: "4.0.0-alpha.2")
     ],
     targets: [
         .target(
