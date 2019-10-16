@@ -233,7 +233,7 @@ class UploadCommand: Command {
     /// - Parameter remoteTerms: array of downloaded remote terms
     private func findDifferences(localTerms: [String], remoteTerms: [String]) throws -> TermsDifference {
         if #available(OSX 10.15, *) {
-            let difference = localTerms.difference(from: remoteTerms)
+            let difference = localTerms.sorted().difference(from: remoteTerms.sorted())
             // get insertations
             let insertations = difference.insertions.compactMap { element -> String? in
                 switch element {
