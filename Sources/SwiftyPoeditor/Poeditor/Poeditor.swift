@@ -240,7 +240,7 @@ class Poeditor {
         // generate url and body
         let urlPath = Constants.API.baseURL + "/" + Constants.API.version + "/" + Constants.API.exportLocalizationEndpoint
         let language = settings.language
-        let bodyString = "api_token=\(settings.token)&id=\(settings.id)&language=\(language)&type=\(exportType.rawValue)"
+        let bodyString = "api_token=\(settings.token)&id=\(settings.id)&language=\(language)&type=\(exportType.rawValue)&order=terms"
         let body = bodyString.data(using: .utf8)
         
         guard let encodedBody = body else {
