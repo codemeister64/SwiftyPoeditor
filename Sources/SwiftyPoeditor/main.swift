@@ -12,7 +12,7 @@ config.use(DownloadCommand(), as: "download")
 do {
     // start CLI commands handler
     let commands = try config.resolve()
-        .group(help: "PoeditorI18n - command line tool to sync local translations with remote on POEditor service")
+        .group(help: "SwiftyPoeditor - command line tool to sync local translations with remote on POEditor service")
     try console.run(commands, input: input)
 } catch {
     console.error("Error: \(error.localizedDescription)")

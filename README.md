@@ -7,8 +7,12 @@ SwiftyPoeditor is a Swift command-line tool for dealing with iOS/macOS localizat
 ## Installation
 
 1. Clone repository and open project root folder in your command line
-2. Run the following commands:
+2. Run install script:
 
+```bash
+./install.sh
+```
+Or you can compile and install tool manually:
 ```bash
 swift build -c release
 cd .build/release
@@ -133,6 +137,61 @@ You're ready to roll. You should now see the new scheme in the scheme selector. 
 
 **Also, you can integrate SwiftyPoeditor with your CI.**
 
+#### Build phase scripts examples:
+##### Upload command:
+```bash
+# check if SwiftyPoeditor available
+# and install if not available
+FILE=/usr/local/bin/SwiftyPoeditor
+if test -f "$FILE"; then
+    echo "SwiftyPoeditor installed and can be used"
+else 
+    echo "SwiftyPoeditor not installed. Will try to install"
+
+    TEMP_PATH=./SwiftyPoeditprTemp
+
+    rm -Rf ${TEMP_PATH}
+    git clone https://github.com/avitruk/SwiftyPoeditor.git ${TEMP_PATH}
+    cd ${TEMP_PATH}
+    sh ./install.sh
+    cd -
+    rm -Rf ${TEMP_PATH}
+fi
+# run SwiftyPoeditor
+echo "SwiftyPoeditor start execution"
+
+SwiftyPoeditor upload --path "$PROJECT_DIR/PATH/TO/LocalizationEnum/I18n.swift" --name I18n --token API_TOKEN --id PROJECT_ID --delete-removals false --yes
+
+echo "SwiftyPoeditor end execution"
+```
+##### Download command:
+```bash
+# check if SwiftyPoeditor available
+# and install if not available
+FILE=/usr/local/bin/SwiftyPoeditor
+if test -f "$FILE"; then
+    echo "SwiftyPoeditor installed and can be used"
+else 
+    echo "SwiftyPoeditor not installed. Will try to install"
+
+    TEMP_PATH=./SwiftyPoeditprTemp
+
+    rm -Rf ${TEMP_PATH}
+    git clone https://github.com/avitruk/SwiftyPoeditor.git ${TEMP_PATH}
+    cd ${TEMP_PATH}
+    sh ./install.sh
+    cd -
+    rm -Rf ${TEMP_PATH}
+fi
+# run SwiftyPoeditor
+echo "SwiftyPoeditor start execution"
+
+SwiftyPoeditor download -t API_TOKEN -i PROJECT_ID -l en -d "$PROJECT_DIR/PATH/TO/EN/STRINGS/Localizable.strings" -e apple_strings --yes
+SwiftyPoeditor download -t API_TOKEN -i PROJECT_ID -l ANOTHER_LANGUAGE_CODE -d "$PROJECT_DIR/PATH/TO/ANOTHER_LANGUAGE/STRINGS/Localizable.strings" -e apple_strings --yes
+
+echo "SwiftyPoeditor end execution"
+```
+
 ## Contributing
 Pull requests are welcome. For major changes, please open an issue first to discuss what you would like to change.
 
@@ -143,3 +202,4 @@ Pull requests are welcome. For major changes, please open an issue first to disc
 
 ## License
 This project is licensed under the [MIT](https://choosealicense.com/licenses/mit/) License - see the LICENSE.md file for details
+
