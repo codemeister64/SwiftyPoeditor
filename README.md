@@ -34,7 +34,7 @@ SwiftyPoeditor download
 SwiftyPoeditor upload
 
 // or add --help flag to show all available arguments
-SwiftyPoeditor -- help
+SwiftyPoeditor --help
 SwiftyPoeditor download --help
 ```
 
@@ -160,7 +160,7 @@ fi
 # run SwiftyPoeditor
 echo "SwiftyPoeditor start execution"
 
-SwiftyPoeditor upload --path "$PROJECT_DIR/PATH/TO/LocalizationEnum/I18n.swift" --name I18n --token API_TOKEN --id PROJECT_ID --delete-removals false --yes
+SwiftyPoeditor upload --path "$PROJECT_DIR/PATH/TO/LocalizationEnum/I18n.swift" --name I18n --token API_TOKEN --id PROJECT_ID --delete-removals false --yes --short-output
 
 echo "SwiftyPoeditor end execution"
 ```
@@ -186,8 +186,8 @@ fi
 # run SwiftyPoeditor
 echo "SwiftyPoeditor start execution"
 
-SwiftyPoeditor download -t API_TOKEN -i PROJECT_ID -l en -d "$PROJECT_DIR/PATH/TO/EN/STRINGS/Localizable.strings" -e apple_strings --yes
-SwiftyPoeditor download -t API_TOKEN -i PROJECT_ID -l ANOTHER_LANGUAGE_CODE -d "$PROJECT_DIR/PATH/TO/ANOTHER_LANGUAGE/STRINGS/Localizable.strings" -e apple_strings --yes
+SwiftyPoeditor download -t API_TOKEN -i PROJECT_ID -l en -d "$PROJECT_DIR/PATH/TO/EN/STRINGS/Localizable.strings" -e apple_strings --yes --short-output
+SwiftyPoeditor download -t API_TOKEN -i PROJECT_ID -l ANOTHER_LANGUAGE_CODE -d "$PROJECT_DIR/PATH/TO/ANOTHER_LANGUAGE/STRINGS/Localizable.strings" -e apple_strings --yes --short-output
 
 echo "SwiftyPoeditor end execution"
 ```

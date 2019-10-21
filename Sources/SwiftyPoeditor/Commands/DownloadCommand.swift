@@ -19,7 +19,7 @@ enum DownloadCommandError: Error, LocalizedError {
     }
 }
 
-class DownloadCommand: Command {
+class DownloadCommand: Command, PrettyOutput {
     
     // MARK: - Declarations
     
@@ -39,20 +39,25 @@ class DownloadCommand: Command {
         @Flag(name: "yes", short: "y", help: "Automaticly say \"yes\" in every y/n question. E.g for the parsed settings validation")
         var yesForAll: Bool
         
-        init() { }
+        @Flag(name: "short-output", short: "s", help: "Disables printing unnecessary information and disables colored output")
+        var shortOutput: Bool
+        
+        init() {}
     }
     
     // MARK: - Private properties
     
     private var poeditorClient: Poeditor? // POEditor API client
     private var fileManager: LocalizationsFileManager? // FileManager
-    private var currentLoadingBar: ActivityIndicator<LoadingBar>? // console activity indicator
     
     // MARK: - Public properties
     
     var help: String {
-        "This command will export and donwload specified language as *.strings from POEditor service."
+        "This command will export and download specified language as *.strings from POEditor service."
     }
+    
+    var currentLoadingBar: ActivityIndicator<LoadingBar>? // console activity indicator
+    var shortOutput: Bool = false
     
     // MARK: - Command protocol implementation
     
@@ -89,13 +94,16 @@ class DownloadCommand: Command {
     /// - Parameter context: current console context
     /// - Parameter signature: received signature
     private func parseInput(context: CommandContext, signature: Signature) -> DownloadSettings {
+        self.shortOutput = signature.shortOutput
+        
+        let errorStyle: ConsoleStyle = shortOutput ? .plain : .error
         
         var token: String
         // use provided token or ask it
         if let argToken = signature.token {
             token = argToken
         } else {
-            token = context.console.ask("You should provide your API token for the POEditor.\nEnter it now or use command (--help for details)?".consoleText(.error))
+            token = context.console.ask("You should provide your API token for the POEditor.\nEnter it now or use command (--help for details)?".consoleText(errorStyle))
         }
         
         var id: String
@@ -103,7 +111,7 @@ class DownloadCommand: Command {
         if let argID = signature.id {
             id = argID
         } else {
-            id = context.console.ask("You should provide your POEditor project ID.\nEnter it now or use command (--help for details)?".consoleText(.error))
+            id = context.console.ask("You should provide your POEditor project ID.\nEnter it now or use command (--help for details)?".consoleText(errorStyle))
         }
         
         // use provided language or use default (optional param)
@@ -120,7 +128,7 @@ class DownloadCommand: Command {
                 if decision == true {
                     language = Constants.Defaults.language
                 } else {
-                    language = context.console.ask("You should provide language code of localization that should be downloaded.\nEnter it now or use command (--help for details)?".consoleText(.error))
+                    language = context.console.ask("You should provide language code of localization that should be downloaded.\nEnter it now or use command (--help for details)?".consoleText(errorStyle))
                 }
             }
         }
@@ -130,7 +138,7 @@ class DownloadCommand: Command {
         if let argDestination = signature.destination {
             destination = argDestination
         } else {
-            destination = context.console.ask("You should provide destination file path where downloaded localization should be saved.\nEnter it now or use command (--help for details)?".consoleText(.error))
+            destination = context.console.ask("You should provide destination file path where downloaded localization should be saved.\nEnter it now or use command (--help for details)?".consoleText(errorStyle))
         }
         
         var exportType: PoeditorExportType
@@ -148,12 +156,12 @@ class DownloadCommand: Command {
                 if let type = PoeditorExportType(rawValue: decision) {
                     exportType = type
                 } else {
-                    context.console.warning("Unable to parse selected export type. \( Constants.Defaults.exportType.rawValue) will be used.")
+                    printToConsole(context: context, string: "Unable to parse selected export type. \( Constants.Defaults.exportType.rawValue) will be used.", style: .warning)
                     exportType = Constants.Defaults.exportType
                 }
             }
         }
-    
+        
         let poeditorSettings: PoeditorSettings = PoeditorSettings(token: token,
                                                                   id: id,
                                                                   language: language)
@@ -168,13 +176,32 @@ class DownloadCommand: Command {
     /// - Parameter settings: parsed settings
     /// - Parameter context: current console context
     private func printSettings(settings: DownloadSettings, context: CommandContext) {
-        let settingsText: ConsoleText = [ConsoleTextFragment(string: "\n", style: .init(color: .red)),
-                                         ConsoleTextFragment(string: "Current settings that will be used:\n", style: .init(color: .red)),
-                                         ConsoleTextFragment(string: "token: \(settings.poeditorSettings.token)\n", style: .init(color: .brightMagenta)),
-                                         ConsoleTextFragment(string: "id: \(settings.poeditorSettings.id)\n", style: .init(color: .brightMagenta)),
-                                         ConsoleTextFragment(string: "language: \(settings.poeditorSettings.language)\n", style: .init(color: .brightMagenta)),
-                                         ConsoleTextFragment(string: "destination: \(settings.fileManagerSettings.destinationPath)\n", style: .init(color: .brightMagenta)),
-                                         ConsoleTextFragment(string: "export type: \(settings.type.rawValue)\n", style: .init(color: .brightMagenta))]
+        let redStyle: ConsoleStyle = shortOutput ? .plain : .init(color: .red)
+        let brightMagentaStyle: ConsoleStyle = shortOutput ? .plain : .init(color: .red)
+        
+        let rawToken = settings.poeditorSettings.token
+        let tokenRange = rawToken.startIndex..<rawToken.index(rawToken.endIndex, offsetBy: -3)
+        let tokenStar = rawToken[tokenRange].map { _ in "*" }.joined(separator: "")
+        let token: String = rawToken.replacingCharacters(in: tokenRange, with: tokenStar)
+        
+        let rawProjectID = settings.poeditorSettings.id
+        let projectIDRange = rawProjectID.startIndex..<rawProjectID.index(rawProjectID.endIndex, offsetBy: -3)
+        let projectStar = rawProjectID[projectIDRange].map { _ in "*" }.joined(separator: "")
+        let projectID: String = rawProjectID.replacingCharacters(in: projectIDRange, with: projectStar)
+        
+        let settingsText: ConsoleText = [ConsoleTextFragment(string: "\n", style: redStyle),
+                                         ConsoleTextFragment(string: "Current settings that will be used:\n",
+                                                             style: brightMagentaStyle),
+                                         ConsoleTextFragment(string: "token: \(token)\n",
+                                            style: brightMagentaStyle),
+                                         ConsoleTextFragment(string: "id: \(projectID)\n",
+                                            style: brightMagentaStyle),
+                                         ConsoleTextFragment(string: "language: \(settings.poeditorSettings.language)\n",
+                                            style: brightMagentaStyle),
+                                         ConsoleTextFragment(string: "destination: \(settings.fileManagerSettings.destinationPath)\n",
+                                            style: brightMagentaStyle),
+                                         ConsoleTextFragment(string: "export type: \(settings.type.rawValue)\n",
+                                            style: brightMagentaStyle)]
         
         context.console.output(settingsText)
     }
@@ -188,8 +215,9 @@ class DownloadCommand: Command {
             return
         }
         
+        let redStyle: ConsoleStyle = shortOutput ? .plain : .init(color: .red)
         let text = ConsoleText(arrayLiteral: ConsoleTextFragment(string: "Please check all settings carefully. Everything is correct?",
-                                                                 style: .init(color: .red)))
+                                                                 style: redStyle))
         let result = context.console.confirm(text)
         
         guard result == true else {
@@ -201,14 +229,15 @@ class DownloadCommand: Command {
     /// - Parameter settings: parsed settings
     /// - Parameter context: current console context
     private func requestLocalizationDownloadURL(with settings: DownloadSettings, context: CommandContext) throws -> String {
-        currentLoadingBar = context.console.loadingBar(title: "Requesting \(settings.poeditorSettings.language) localization download url...")
+        createLoadingBar(context: context, title: "Requesting \(settings.poeditorSettings.language) localization download url...")
         currentLoadingBar?.start()
         
         let client = getOrCreatePOEditorClient(settings: settings.poeditorSettings)
         let result = try client.requestExportLocalization(exportType: settings.type).wait()
         
         currentLoadingBar?.succeed()
-        context.console.info("Download url is \(result.urlPath)")
+        
+        printToConsole(context: context, string: "Download url is \(result.urlPath)", style: .info)
         
         return result.urlPath
     }
@@ -217,14 +246,17 @@ class DownloadCommand: Command {
     /// - Parameter settings: parsed settings
     /// - Parameter context: current console settings
     private func downloadLocalization(with settings: DownloadSettings, downloadURLPath: String, context: CommandContext) throws -> Data {
-        currentLoadingBar = context.console.loadingBar(title: "Downloading \(settings.poeditorSettings.language) localization...")
+        createLoadingBar(context: context, title: "Downloading \(settings.poeditorSettings.language) localization...")
         currentLoadingBar?.start()
         
         let client = getOrCreatePOEditorClient(settings: settings.poeditorSettings)
         let result = try client.downloadLocalization(downloadPath: downloadURLPath).wait()
         
         currentLoadingBar?.succeed()
-        context.console.info("Download \(settings.poeditorSettings.language) localization success")
+        
+        printToConsole(context: context,
+                       string: "Download \(settings.poeditorSettings.language) localization success",
+            style: .info)
         
         return result
     }
@@ -234,14 +266,17 @@ class DownloadCommand: Command {
     /// - Parameter data: downloaded data
     /// - Parameter context: current console settings
     private func writeDataToFile(with settings: DownloadSettings, data: Data, context: CommandContext) throws {
-        currentLoadingBar = context.console.loadingBar(title: "Writing data to file at path \(settings.fileManagerSettings.destinationPath)...")
+        createLoadingBar(context: context, title: "Writing data to file at path \(settings.fileManagerSettings.destinationPath)...")
         currentLoadingBar?.start()
         
         let manager = getOrCreateFileManager(settings: settings.fileManagerSettings)
         let result = try manager.writeData(data: data)
         
         currentLoadingBar?.succeed()
-        context.console.info("File successfully written at path \(result.path)")
+        
+        printToConsole(context: context,
+                       string: "File successfully written at path \(result.path)",
+            style: .info)
     }
     
     /// get or create new POEditor API client

@@ -19,7 +19,7 @@ enum UploadCommandError: Error, LocalizedError {
     }
 }
 
-class UploadCommand: Command {
+class UploadCommand: Command, PrettyOutput {
     
     // MARK: - Declarations
     
@@ -43,6 +43,9 @@ class UploadCommand: Command {
         @Flag(name: "yes", short: "y", help: "Automaticly say \"yes\" in every y/n question. E.g for the parsed settings validation")
         var yesForAll: Bool
         
+        @Flag(name: "short-output", short: "s", help: "Disables printing unnecessary information and disables colored output")
+        var shortOutput: Bool
+        
         init() { }
     }
     
@@ -56,13 +59,15 @@ class UploadCommand: Command {
     // MARK: - Private properties
     
     private var poeditorClient: Poeditor? // POEditor API client
-    private var currentLoadingBar: ActivityIndicator<LoadingBar>? // console activity indicator
     
     // MARK: - Public properties
     
     var help: String {
         "This command will sync POEditor terms. Source terms list generates based on localization enum"
     }
+    
+    var currentLoadingBar: ActivityIndicator<LoadingBar>? // console activity indicator
+    var shortOutput: Bool = false
     
     // MARK: - Command protocol implementation
     
@@ -83,7 +88,7 @@ class UploadCommand: Command {
             // get remote terms
             let remoteTerms = try downloadPoeditorTerms(with: settings, context: context)
             // find differences
-            let difference = try findDifferences(localTerms: localTerms, remoteTerms: remoteTerms)
+            let difference = try findDifferences(localTerms: localTerms, remoteTerms: remoteTerms, context: context)
             // try to delete terms that was removed
             try deleteTermsIfNeeded(terms: difference.removals, settings: settings, context: context)
             // try to upload new terms
@@ -103,12 +108,16 @@ class UploadCommand: Command {
     /// - Parameter context: current console context
     /// - Parameter signature: received signature
     private func parseInput(context: CommandContext, signature: Signature) -> UploadSettings {
+        self.shortOutput = signature.shortOutput
+        
+        let errorStyle: ConsoleStyle = shortOutput ? .plain : .error
+        
         var path: String
         // use provided path or ask it
         if let argPath = signature.path {
             path = argPath
         } else {
-            path = context.console.ask("You should provide path to your localization enum swift file.\nEnter it now or use command (--help for details)?".consoleText(.error))
+            path = context.console.ask("You should provide path to your localization enum swift file.\nEnter it now or use command (--help for details)?".consoleText(errorStyle))
         }
         
         var name: String
@@ -125,7 +134,7 @@ class UploadCommand: Command {
                 if decision == true {
                     name = Constants.Defaults.enumName
                 } else {
-                    name = context.console.ask("You should provide name of your localization enum.\nEnter it now or use command (--help for details)?".consoleText(.error))
+                    name = context.console.ask("You should provide name of your localization enum.\nEnter it now or use command (--help for details)?".consoleText(errorStyle))
                 }
             }
         }
@@ -135,7 +144,7 @@ class UploadCommand: Command {
         if let argToken = signature.token {
             token = argToken
         } else {
-            token = context.console.ask("You should provide your API token for the POEditor.\nEnter it now or use command (--help for details)?".consoleText(.error))
+            token = context.console.ask("You should provide your API token for the POEditor.\nEnter it now or use command (--help for details)?".consoleText(errorStyle))
         }
         
         var id: String
@@ -143,7 +152,7 @@ class UploadCommand: Command {
         if let argID = signature.id {
             id = argID
         } else {
-            id = context.console.ask("You should provide your POEditor project ID.\nEnter it now or use command (--help for details)?".consoleText(.error))
+            id = context.console.ask("You should provide your POEditor project ID.\nEnter it now or use command (--help for details)?".consoleText(errorStyle))
         }
         // use provided language or use default (optional param)
         let language: String = signature.language ?? Constants.Defaults.language
@@ -165,15 +174,35 @@ class UploadCommand: Command {
     /// - Parameter settings: parsed settings
     /// - Parameter context: current console context
     private func printSettings(settings: UploadSettings, context: CommandContext) {
-        let settingsText: ConsoleText = [ConsoleTextFragment(string: "\n", style: .init(color: .red)),
-                                         ConsoleTextFragment(string: "Current settings that will be used:\n", style: .init(color: .red)),
-                                         ConsoleTextFragment(string: "path: \(settings.parserSettings.path)\n", style: .init(color: .brightMagenta)),
-                                         ConsoleTextFragment(string: "name: \(settings.parserSettings.enumName)\n", style: .init(color: .brightMagenta)),
-                                         ConsoleTextFragment(string: "lowercased mode: \(settings.parserSettings.lowercasedMode)\n", style: .init(color: .brightMagenta)),
-                                         ConsoleTextFragment(string: "token: \(settings.poeditorSettings.token)\n", style: .init(color: .brightMagenta)),
-                                         ConsoleTextFragment(string: "id: \(settings.poeditorSettings.id)\n", style: .init(color: .brightMagenta)),
-                                         ConsoleTextFragment(string: "language: \(settings.poeditorSettings.language)\n", style: .init(color: .brightMagenta)),
-                                         ConsoleTextFragment(string: "delete removals: \(settings.deleteRemovals)\n", style: .init(color: .brightMagenta))]
+        let redStyle: ConsoleStyle = shortOutput ? .plain : .init(color: .red)
+        let brightMagentaStyle: ConsoleStyle = shortOutput ? .plain : .init(color: .red)
+        
+        let rawToken = settings.poeditorSettings.token
+        let tokenRange = rawToken.startIndex..<rawToken.index(rawToken.endIndex, offsetBy: -3)
+        let tokenStar = rawToken[tokenRange].map { _ in "*" }.joined(separator: "")
+        let token: String = rawToken.replacingCharacters(in: tokenRange, with: tokenStar)
+        
+        let rawProjectID = settings.poeditorSettings.id
+        let projectIDRange = rawProjectID.startIndex..<rawProjectID.index(rawProjectID.endIndex, offsetBy: -3)
+        let projectStar = rawProjectID[projectIDRange].map { _ in "*" }.joined(separator: "")
+        let projectID: String = rawProjectID.replacingCharacters(in: projectIDRange, with: projectStar)
+        
+        let settingsText: ConsoleText = [ConsoleTextFragment(string: "\n", style: redStyle),
+                                         ConsoleTextFragment(string: "Current settings that will be used:\n",
+                                                             style: brightMagentaStyle),
+                                         ConsoleTextFragment(string: "path: \(settings.parserSettings.path)\n",
+                                            style: brightMagentaStyle),
+                                         ConsoleTextFragment(string: "name: \(settings.parserSettings.enumName)\n",
+                                            style: brightMagentaStyle),
+                                         ConsoleTextFragment(string: "lowercased mode: \(settings.parserSettings.lowercasedMode)\n", style: brightMagentaStyle),
+                                         ConsoleTextFragment(string: "token: \(token)\n",
+                                            style: brightMagentaStyle),
+                                         ConsoleTextFragment(string: "id: \(projectID)\n",
+                                            style: brightMagentaStyle),
+                                         ConsoleTextFragment(string: "language: \(settings.poeditorSettings.language)\n",
+                                            style: brightMagentaStyle),
+                                         ConsoleTextFragment(string: "delete removals: \(settings.deleteRemovals)\n",
+                                            style: brightMagentaStyle)]
         
         context.console.output(settingsText)
     }
@@ -187,8 +216,9 @@ class UploadCommand: Command {
             return
         }
         
+        let redStyle: ConsoleStyle = shortOutput ? .plain : .init(color: .red)
         let text = ConsoleText(arrayLiteral: ConsoleTextFragment(string: "Please check all settings carefully. Everything is correct?",
-                                                                 style: .init(color: .red)))
+                                                                 style: redStyle))
         let result = context.console.confirm(text)
         
         guard result == true else {
@@ -200,14 +230,14 @@ class UploadCommand: Command {
     /// - Parameter settings: parsed settings
     /// - Parameter context: current console context
     private func parseLocalizationFile(with settings: UploadSettings, context: CommandContext) throws -> [String] {
-        currentLoadingBar = context.console.loadingBar(title: "Parsing enum file...")
+        createLoadingBar(context: context, title: "Parsing enum file...")
         currentLoadingBar?.start()
         
         let parser = FileParser(with: settings.parserSettings)
         let result = try parser.parse()
         
         currentLoadingBar?.succeed()
-        context.console.info("Enum parsed terms count: \(result.count)")
+        printToConsole(context: context, string: "Enum parsed terms count: \(result.count)", style: .info)
         
         return result
     }
@@ -216,14 +246,14 @@ class UploadCommand: Command {
     /// - Parameter settings: parsed settings
     /// - Parameter context: current console context
     private func downloadPoeditorTerms(with settings: UploadSettings, context: CommandContext) throws -> [String] {
-        currentLoadingBar = context.console.loadingBar(title: "Downloading POEditor terms...")
+        createLoadingBar(context: context, title: "Downloading POEditor terms...")
         currentLoadingBar?.start()
         
         let client = getOrCreatePOEditorClient(settings: settings.poeditorSettings)
         let result = try client.getAllTerms().wait()
         
         currentLoadingBar?.succeed()
-        context.console.info("Downloaded terms count: \(result.terms.count)")
+        printToConsole(context: context, string: "Downloaded terms count: \(result.terms.count)", style: .info)
         
         return result.allKeys
     }
@@ -231,7 +261,8 @@ class UploadCommand: Command {
     /// find differences between local terms and remote terms
     /// - Parameter localTerms: array of parsed local terms
     /// - Parameter remoteTerms: array of downloaded remote terms
-    private func findDifferences(localTerms: [String], remoteTerms: [String]) throws -> TermsDifference {
+    /// - Parameter context: current console context
+    private func findDifferences(localTerms: [String], remoteTerms: [String], context: CommandContext) throws -> TermsDifference {
         if #available(OSX 10.15, *) {
             let difference = localTerms.sorted().difference(from: remoteTerms.sorted())
             // get insertations
@@ -255,8 +286,7 @@ class UploadCommand: Command {
             
             return TermsDifference(insertations: insertations, removals: removals)
         } else {
-            // Fallback on earlier versions
-            console.warning("findDifferences: Fallback on earlier versions of macOS")
+            printToConsole(context: context, string: "findDifferences: Fallback on earlier versions of macOS", style: .warning)
             
             let diff = Set(remoteTerms).symmetricDifference(localTerms)
             // find diff via set and then decompose result into insertations and removals
@@ -274,25 +304,27 @@ class UploadCommand: Command {
     private func deleteTermsIfNeeded(terms: [String], settings: UploadSettings, context: CommandContext) throws {
         // check for deletion mode
         guard settings.deleteRemovals == true else {
-            context.console.info("Delete terms option disabled by settings. Please check --help for details.")
+            printToConsole(context: context, string: "Delete terms option disabled by settings. Please check --help for details.", style: .info)
             return
         }
         // check for terms existance
         guard terms.isEmpty == false else {
-            context.console.info("No terms for removal found.")
+            printToConsole(context: context, string: "No terms for removal found.", style: .info)
             return
         }
         // print terms that should be deleted
+        let redStyle: ConsoleStyle = shortOutput ? .plain : .init(color: .red)
         var deletionTermsText: ConsoleText = [ConsoleTextFragment(string: "\n", style: .init(color: .red)),
-                                              ConsoleTextFragment(string: "Following terms will be deleted:\n", style: .init(color: .red))]
+                                              ConsoleTextFragment(string: "Following terms will be deleted:\n", style: redStyle)]
         
+        let brightYellowStyle: ConsoleStyle = shortOutput ? .plain : .init(color: .brightYellow)
         for (index, term) in terms.enumerated() {
-            deletionTermsText.fragments.append(ConsoleTextFragment(string: "\(index + 1). \(term)\n", style: .init(color: .brightYellow)))
+            deletionTermsText.fragments.append(ConsoleTextFragment(string: "\(index + 1). \(term)\n", style: brightYellowStyle))
         }
         
         context.console.output(deletionTermsText)
         // show progress
-        currentLoadingBar = context.console.loadingBar(title: "Deleting POEditor terms...")
+        createLoadingBar(context: context, title: "Deleting POEditor terms...")
         currentLoadingBar?.start()
         // make request
         let values = terms.map { TermValue(term: $0) }
@@ -301,13 +333,13 @@ class UploadCommand: Command {
         // validate request result
         if result.deleted == 0 {
             currentLoadingBar?.fail()
-            context.console.error("Parsed count \(result.parsed), deleted count \(result.deleted), expected count \(values.count)")
+            printToConsole(context: context, string: "Parsed count \(result.parsed), deleted count \(result.deleted), expected count \(values.count)", style: .error)
         } else if result.deleted != values.count {
             currentLoadingBar?.fail()
-            context.console.error("Parsed count \(result.parsed), deleted count \(result.deleted), expected count \(values.count)")
+            printToConsole(context: context, string: "Parsed count \(result.parsed), deleted count \(result.deleted), expected count \(values.count)", style: .error)
         } else {
             currentLoadingBar?.succeed()
-            context.console.success("Deleted \(result.deleted) terms")
+            printToConsole(context: context, string: "Deleted \(result.deleted) terms", style: .success)
         }
     }
     
@@ -318,20 +350,22 @@ class UploadCommand: Command {
     private func addTermsIfNeeded(terms: [String], settings: UploadSettings, context: CommandContext) throws {
         // check for terms existance
         guard terms.isEmpty == false else {
-            context.console.info("No terms for insertation found.")
+            printToConsole(context: context, string: "No terms for insertation found.", style: .info)
             return
         }
         // print terms that should be deleted
+        let redStyle: ConsoleStyle = shortOutput ? .plain : .init(color: .red)
         var insertedTermsText: ConsoleText = [ConsoleTextFragment(string: "\n", style: .init(color: .red)),
-                                              ConsoleTextFragment(string: "Following terms will be inserted:\n", style: .init(color: .red))]
+                                              ConsoleTextFragment(string: "Following terms will be inserted:\n", style: redStyle)]
         
+        let brightYellowStyle: ConsoleStyle = shortOutput ? .plain : .init(color: .brightYellow)
         for (index, term) in terms.enumerated() {
-            insertedTermsText.fragments.append(ConsoleTextFragment(string: "\(index + 1). \(term)\n", style: .init(color: .brightYellow)))
+            insertedTermsText.fragments.append(ConsoleTextFragment(string: "\(index + 1). \(term)\n", style: brightYellowStyle))
         }
         
         context.console.output(insertedTermsText)
         // show progress
-        currentLoadingBar = context.console.loadingBar(title: "Inserting POEditor terms...")
+        createLoadingBar(context: context, title: "Inserting POEditor terms...")
         currentLoadingBar?.start()
         // make request
         let values = terms.map { TermValue(term: $0) }
@@ -340,13 +374,13 @@ class UploadCommand: Command {
         // validate request result
         if result.added == 0 {
             currentLoadingBar?.fail()
-            context.console.error("Parsed count \(result.parsed), inserted count \(result.added), expected count \(values.count)")
+            printToConsole(context: context, string: "Parsed count \(result.parsed), inserted count \(result.added), expected count \(values.count)", style: .error)
         } else if result.added != values.count {
             currentLoadingBar?.fail()
-            context.console.error("Parsed count \(result.parsed), inserted count \(result.added), expected count \(values.count)")
+            printToConsole(context: context, string: "Parsed count \(result.parsed), inserted count \(result.added), expected count \(values.count)", style: .error)
         } else {
             currentLoadingBar?.succeed()
-            context.console.success("Uploaded \(result.added) terms")
+            printToConsole(context: context, string: "Uploaded \(result.added) terms", style: .success)
         }
     }
     
