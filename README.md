@@ -151,7 +151,7 @@ else
     TEMP_PATH=./SwiftyPoeditprTemp
 
     rm -Rf ${TEMP_PATH}
-    git clone https://github.com/avitruk/SwiftyPoeditor.git ${TEMP_PATH}
+    git clone https://github.com/oleksandrviturk/SwiftyPoeditor.git ${TEMP_PATH}
     cd ${TEMP_PATH}
     sh ./install.sh
     cd -
@@ -177,7 +177,7 @@ else
     TEMP_PATH=./SwiftyPoeditprTemp
 
     rm -Rf ${TEMP_PATH}
-    git clone https://github.com/avitruk/SwiftyPoeditor.git ${TEMP_PATH}
+    git clone https://github.com/oleksandrviturk/SwiftyPoeditor.git ${TEMP_PATH}
     cd ${TEMP_PATH}
     sh ./install.sh
     cd -
