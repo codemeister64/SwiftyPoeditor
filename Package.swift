@@ -15,11 +15,8 @@ let package = Package(
     ],
     targets: [
         .target(
-            name: "SwiftyPoeditor",
+            name: "swifty-poeditor",
             dependencies: ["SwiftAST+Tooling", "SwiftyRequest", "ConsoleKit"]),
-        .testTarget(
-            name: "SwiftyPoeditorTests",
-            dependencies: ["SwiftyPoeditor"]),
     ],
     swiftLanguageVersions: [.v5]
 )
