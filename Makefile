@@ -5,7 +5,7 @@ build:
 	swift build -c release --disable-sandbox
 
 install: build
-	install ".build/release/swifty-poeditor" "$(bindir)/"
+	install ".build/release/swifty-poeditor" "$(bindir)"
 
 uninstall:
 	rm -rf "$(bindir)/swifty-poeditor"
