@@ -1,16 +1,38 @@
+SHELL = /bin/bash
+
 prefix ?= /usr/local
-bindir = $(prefix)/bin
+bindir ?= $(prefix)/bin
+libdir ?= $(prefix)/lib
+srcdir = Sources
 
-build:
-	swift build -c release --disable-sandbox
+REPODIR = $(shell pwd)
+BUILDDIR = $(REPODIR)/.build
+SOURCES = $(wildcard $(srcdir)/**/*.swift)
 
-install: build
-	install ".build/release/swifty-poeditor" "$(bindir)/swifty-poeditor"
+.DEFAULT_GOAL = all
 
+.PHONY: all
+all: swifty-poeditor
+
+swifty-poeditor: $(SOURCES)
+	@swift build \
+		-c release \
+		--disable-sandbox \
+		--build-path "$(BUILDDIR)"
+
+.PHONY: install
+install: swifty-poeditor
+	@install -d "$(bindir)" "$(libdir)"
+	@install "$(BUILDDIR)/release/swifty-poeditor" "$(bindir)"
+
+.PHONY: uninstall
 uninstall:
-	rm -rf "$(bindir)/swifty-poeditor"
+	@rm -rf "$(bindir)/swifty-poeditor"
 
-clean:
-	rm -rf .build
+.PHONY: clean
+distclean:
+	@rm -f $(BUILDDIR)/release
 
-.PHONY: build install uninstall clean
+.PHONY: clean
+clean: distclean
+	@rm -rf $(BUILDDIR)
