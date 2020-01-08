@@ -7,6 +7,9 @@ let package = Package(
     platforms: [
         .macOS(.v10_14)
     ],
+    products: [
+        .executable(name: "swifty-poeditor", targets: ["swifty-poeditor"]),
+    ],
     dependencies: [
         .package(url: "https://github.com/yanagiba/swift-ast.git",
                  from: "0.19.9"),
