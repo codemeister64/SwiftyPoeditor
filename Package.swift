@@ -11,10 +11,9 @@ let package = Package(
         .executable(name: "swifty-poeditor", targets: ["swifty-poeditor"]),
     ],
     dependencies: [
-        .package(url: "https://github.com/yanagiba/swift-ast.git",
-                 from: "0.19.9"),
-        .package(url: "https://github.com/IBM-Swift/SwiftyRequest.git", from: "3.0.0"),
-        .package(url: "https://github.com/vapor/console-kit.git", from: "4.0.0-alpha.2")
+        .package(url: "https://github.com/yanagiba/swift-ast.git", .exact("0.4.2")),
+        .package(url: "https://github.com/IBM-Swift/SwiftyRequest.git", .exact("3.1.0")),
+        .package(url: "https://github.com/vapor/console-kit.git", .exact("4.0.0-beta.2"))
     ],
     targets: [
         .target(
