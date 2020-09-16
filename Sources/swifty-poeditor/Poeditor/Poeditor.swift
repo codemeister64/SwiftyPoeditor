@@ -6,8 +6,8 @@
 //
 
 import Foundation
-import SwiftyRequest
 import NIO
+import AsyncHTTPClient
 
 enum PoeditorError: Error, LocalizedError {
     case unableEncodeBody(String)
@@ -30,11 +30,12 @@ enum PoeditorError: Error, LocalizedError {
 }
 
 class Poeditor {
-    #warning("TODO: remove IBM SwiftyRequest and use something better. Maybe native async-http-client with custom wrapper. SwiftyRequest can't deal with futures outside. So currently we need to create own eventloop")
     
     // MARK: - Private properties
     
     private let settings: PoeditorSettings
+    private let client: HTTPClient
+    
     private let eventLoop: MultiThreadedEventLoopGroup
     private lazy var decoder: JSONDecoder = {
         // json decoder with custom date decode strategy
@@ -73,6 +74,7 @@ class Poeditor {
         
         self.settings = settings
         self.eventLoop = eventLoop // use default event-loop
+        self.client = HTTPClient(eventLoopGroupProvider: .shared(eventLoop))
     }
     
     deinit {
@@ -90,36 +92,40 @@ class Poeditor {
         // generate url and body
         let urlPath = Constants.API.baseURL + "/" + Constants.API.version + "/" + Constants.API.termsListEndpoint
         let bodyString = "api_token=\(settings.token)&id=\(settings.id)&language=\(settings.language)"
-        let body = bodyString.data(using: .utf8)
-        
-        guard let encodedBody = body else {
-            promise.fail(PoeditorError.unableEncodeBody(bodyString))
-            return promise.futureResult
-        }
-        
-        // create request
-        let request = RestRequest(method: .post,
-                                  url: urlPath)
-        request.contentType = "application/x-www-form-urlencoded"
-        request.messageBody = encodedBody
-        request.responseData { [weak self] response in
-            switch response {
-            case .success(let result):
-                let data = result.body
-                do {
-                    // try to decode data to expected objects
-                    guard let decoded = try self?.decode(to: PoeditorResult<Terms>.self, data: data),
-                        let term = decoded.result else {
-                            return promise.fail(PoeditorError.wrongResponse)
+
+        do {
+            // create request
+            var request = try HTTPClient.Request(url: urlPath, method: .POST)
+            request.headers.add(name: "Content-Type", value: "application/x-www-form-urlencoded")
+            request.body = .string(bodyString)
+            
+            client.execute(request: request).whenComplete({ [weak self] response in
+                switch response {
+                case .success(let result):
+                    guard result.status == .ok,
+                        let body = result.body,
+                        let decoder = self?.decoder else {
+                        return promise.fail(PoeditorError.wrongResponse)
                     }
                     
-                    promise.succeed(term)
-                } catch {
+                    do {
+                        let decodedResult = try body.getJSONDecodable(PoeditorResult<Terms>.self,
+                                                                      decoder: decoder, at: body.readerIndex, length: body.readableBytes)
+                        // try to decode data to expected objects
+                        guard let model = decodedResult?.result else {
+                            return promise.fail(PoeditorError.wrongResponse)
+                        }
+                        
+                        promise.succeed(model)
+                    } catch {
+                        promise.fail(error)
+                    }
+                case .failure(let error):
                     promise.fail(error)
                 }
-            case .failure(let error):
-                promise.fail(error)
-            }
+            })
+        } catch {
+            promise.fail(error)
         }
         
         return promise.futureResult
@@ -142,37 +148,40 @@ class Poeditor {
             promise.fail(error)
             return promise.futureResult
         }
-        
-        let body = bodyString.data(using: .utf8)
-        
-        guard let encodedBody = body else {
-            promise.fail(PoeditorError.unableEncodeBody(bodyString))
-            return promise.futureResult
-        }
-        
-        // create request
-        let request = RestRequest(method: .post,
-                                  url: urlPath)
-        request.contentType = "application/x-www-form-urlencoded"
-        request.messageBody = encodedBody
-        request.responseData { [weak self] response in
-            switch response {
-            case .success(let result):
-                let data = result.body
-                do {
-                    // try to decode data to expected objects
-                    guard let decoded = try self?.decode(to: PoeditorResult<DeletedTerms>.self, data: data),
-                        let term = decoded.result?.terms else {
-                            return promise.fail(PoeditorError.wrongResponse)
+    
+        do {
+            // create request
+            var request = try HTTPClient.Request(url: urlPath, method: .POST)
+            request.headers.add(name: "Content-Type", value: "application/x-www-form-urlencoded")
+            request.body = .string(bodyString)
+            
+            client.execute(request: request).whenComplete({ [weak self] response in
+                switch response {
+                case .success(let result):
+                    guard result.status == .ok,
+                        let body = result.body,
+                        let decoder = self?.decoder else {
+                        return promise.fail(PoeditorError.wrongResponse)
                     }
                     
-                    promise.succeed(term)
-                } catch {
+                    do {
+                        let decodedResult = try body.getJSONDecodable(PoeditorResult<DeletedTerms>.self,
+                                                                      decoder: decoder, at: body.readerIndex, length: body.readableBytes)
+                        // try to decode data to expected objects
+                        guard let model = decodedResult?.result?.terms else {
+                            return promise.fail(PoeditorError.wrongResponse)
+                        }
+                        
+                        promise.succeed(model)
+                    } catch {
+                        promise.fail(error)
+                    }
+                case .failure(let error):
                     promise.fail(error)
                 }
-            case .failure(let error):
-                promise.fail(error)
-            }
+            })
+        } catch {
+            promise.fail(error)
         }
         
         return promise.futureResult
@@ -196,36 +205,39 @@ class Poeditor {
             return promise.futureResult
         }
         
-        let body = bodyString.data(using: .utf8)
-        
-        guard let encodedBody = body else {
-            promise.fail(PoeditorError.unableEncodeBody(bodyString))
-            return promise.futureResult
-        }
-        
-        // create request
-        let request = RestRequest(method: .post,
-                                  url: urlPath)
-        request.contentType = "application/x-www-form-urlencoded"
-        request.messageBody = encodedBody
-        request.responseData { [weak self] response in
-            switch response {
-            case .success(let result):
-                let data = result.body
-                do {
-                    // try to decode data to expected objects
-                    guard let decoded = try self?.decode(to: PoeditorResult<AddedTerms>.self, data: data),
-                        let term = decoded.result?.terms else {
-                            return promise.fail(PoeditorError.wrongResponse)
+        do {
+            // create request
+            var request = try HTTPClient.Request(url: urlPath, method: .POST)
+            request.headers.add(name: "Content-Type", value: "application/x-www-form-urlencoded")
+            request.body = .string(bodyString)
+            
+            client.execute(request: request).whenComplete({ [weak self] response in
+                switch response {
+                case .success(let result):
+                    guard result.status == .ok,
+                        let body = result.body,
+                        let decoder = self?.decoder else {
+                        return promise.fail(PoeditorError.wrongResponse)
                     }
                     
-                    promise.succeed(term)
-                } catch {
+                    do {
+                        let decodedResult = try body.getJSONDecodable(PoeditorResult<AddedTerms>.self,
+                                                                      decoder: decoder, at: body.readerIndex, length: body.readableBytes)
+                        // try to decode data to expected objects
+                        guard let model = decodedResult?.result?.terms else {
+                            return promise.fail(PoeditorError.wrongResponse)
+                        }
+                        
+                        promise.succeed(model)
+                    } catch {
+                        promise.fail(error)
+                    }
+                case .failure(let error):
                     promise.fail(error)
                 }
-            case .failure(let error):
-                promise.fail(error)
-            }
+            })
+        } catch {
+            promise.fail(error)
         }
         
         return promise.futureResult
@@ -241,60 +253,40 @@ class Poeditor {
         let urlPath = Constants.API.baseURL + "/" + Constants.API.version + "/" + Constants.API.exportLocalizationEndpoint
         let language = settings.language
         let bodyString = "api_token=\(settings.token)&id=\(settings.id)&language=\(language)&type=\(exportType.rawValue)&order=terms"
-        let body = bodyString.data(using: .utf8)
         
-        guard let encodedBody = body else {
-            promise.fail(PoeditorError.unableEncodeBody(bodyString))
-            return promise.futureResult
-        }
-        
-        // create request
-        let request = RestRequest(method: .post,
-                                  url: urlPath)
-        request.contentType = "application/x-www-form-urlencoded"
-        request.messageBody = encodedBody
-        request.responseData { [weak self] response in
-            switch response {
-            case .success(let result):
-                let data = result.body
-                do {
-                    // try to decode data to expected objects
-                    guard let decoded = try self?.decode(to: PoeditorResult<ExportRequestResult>.self, data: data),
-                        let result = decoded.result else {
-                            return promise.fail(PoeditorError.wrongResponse)
+        do {
+            // create request
+            var request = try HTTPClient.Request(url: urlPath, method: .POST)
+            request.headers.add(name: "Content-Type", value: "application/x-www-form-urlencoded")
+            request.body = .string(bodyString)
+            
+            client.execute(request: request).whenComplete({ [weak self] response in
+                switch response {
+                case .success(let result):
+                    guard result.status == .ok,
+                        let body = result.body,
+                        let decoder = self?.decoder else {
+                        return promise.fail(PoeditorError.wrongResponse)
                     }
                     
-                    promise.succeed(result)
-                } catch {
+                    do {
+                        let decodedResult = try body.getJSONDecodable(PoeditorResult<ExportRequestResult>.self,
+                                                                      decoder: decoder, at: body.readerIndex, length: body.readableBytes)
+                        // try to decode data to expected objects
+                        guard let model = decodedResult?.result else {
+                            return promise.fail(PoeditorError.wrongResponse)
+                        }
+                        
+                        promise.succeed(model)
+                    } catch {
+                        promise.fail(error)
+                    }
+                case .failure(let error):
                     promise.fail(error)
                 }
-            case .failure(let error):
-                promise.fail(error)
-            }
-        }
-        
-        return promise.futureResult
-    }
-    
-    /// returns future result with URL on downloaded filed
-    /// - Parameter downloadPath: file download link path
-    /// - Parameter saveFilePath: destination file path
-    @available(*, deprecated, message: "Not work for me. Downloaded file always empty | https://github.com/IBM-Swift/SwiftyRequest/issues/75")
-    func downloadLocalization(downloadPath: String,
-                              saveFilePath: String) -> EventLoopFuture<URL> {
-        // create promise to return future result
-        let promise = eventLoop.next().makePromise(of: URL.self)
-        let saveFileURL = URL(fileURLWithPath: saveFilePath.absolutePath)
-
-        // create request
-        let request = RestRequest(method: .get, url: downloadPath)
-        request.download(to: saveFileURL) { result in
-            switch result {
-            case .success:
-                promise.succeed(saveFileURL)
-            case .failure(let error):
-                promise.fail(error)
-            }
+            })
+        } catch {
+            promise.fail(error)
         }
         
         return promise.futureResult
@@ -307,16 +299,28 @@ class Poeditor {
         let promise = eventLoop.next().makePromise(of: Data.self)
         
         // create request
-        let request = RestRequest(method: .get, url: downloadPath)
-        request.responseData(completionHandler: { response in
-            switch response {
-            case .success(let result):
-                let data = result.body
-                promise.succeed(data)
-            case .failure(let error):
-                promise.fail(error)
-            }
-        })
+        do {
+            // create request
+            let request = try HTTPClient.Request(url: downloadPath, method: .GET)
+            
+            client.execute(request: request).whenComplete({ response in
+                switch response {
+                case .success(let result):
+                    guard result.status == .ok,
+                        let body = result.body,
+                        let data = body.getData(at: body.readerIndex, length: body.readableBytes) else {
+                        promise.fail(PoeditorError.wrongResponse)
+                        return
+                    }
+                    
+                    promise.succeed(data)
+                case .failure(let error):
+                    promise.fail(error)
+                }
+            })
+        } catch {
+            promise.fail(error)
+        }
         
         return promise.futureResult
     }
@@ -345,6 +349,7 @@ class Poeditor {
     /// shutdown eventloop and all active resources
     private func shutDown() {
         do {
+            try self.client.syncShutdown()
             try self.eventLoop.syncShutdownGracefully()
         } catch {
             print(error)
