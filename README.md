@@ -111,6 +111,12 @@ extension LocalizationKeyPathProvider {
     }
 }
 
+extension String {
+    var localized: String {
+        return NSLocalizedString(self, tableName: nil, bundle: Bundle.main, value: "", comment: "")
+    }
+}
+
 // MARK: - Keys
 enum I18n {
     enum Common: LocalizationKeyPathProvider {
